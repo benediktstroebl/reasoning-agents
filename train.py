@@ -1,12 +1,15 @@
 # config.py
 from dataclasses import dataclass
 from typing import Optional, List
+from dotenv import load_dotenv
+
+load_dotenv()
 
 @dataclass
 class TrainingConfig:
-   model_name: str = "meta-llama/Llama-2-8b-hf"
+   model_name: str = "meta-llama/Llama-3.2-1B-Instruct"
    output_dir: str = "./output"
-   num_epochs: int = 3
+   num_epochs: int = 1
    batch_size: int = 4
    eval_batch_size: int = 8
    grad_accum: int = 4
@@ -21,8 +24,8 @@ class TrainingConfig:
    target_modules: List[str] = None
    fp16: bool = True
    save_steps: int = 100
-   logging_steps: int = 100
-   eval_steps: int = 500
+   logging_steps: int = 5
+   eval_steps: int = 10
    save_total_limit: int = 3
    dev_ratio: float = 0.1
    seed: int = 42
@@ -34,8 +37,12 @@ from datasets import Dataset, DatasetDict
 from transformers import AutoTokenizer
 
 def load_data(path: str, config: TrainingConfig) -> DatasetDict:
+   data = []
    with open(path) as f:
-       data = json.load(f)
+       for line in f:
+           data.append(json.loads(line))
+       
+       
    formatted = [{"text": f"Instruction: {ex['instruction']}\n\n{ex['output']}"} 
                 for ex in data]
    
@@ -57,7 +64,7 @@ def get_tokenizer(config: TrainingConfig):
    tokenizer = AutoTokenizer.from_pretrained(
        config.model_name,
        padding_side="right",
-       use_fast=True
+       use_fast=True,
    )
    tokenizer.pad_token = tokenizer.eos_token
    return tokenizer
@@ -86,7 +93,7 @@ def get_model(config: TrainingConfig):
    model = AutoModelForCausalLM.from_pretrained(
        config.model_name,
        device_map="auto",
-       torch_dtype=torch.float16
+       torch_dtype=torch.float16,
    )
    
    if config.use_lora:
@@ -122,9 +129,10 @@ def train(
        per_device_eval_batch_size=config.eval_batch_size,
        gradient_accumulation_steps=config.grad_accum,
        learning_rate=config.lr,
-       fp16=config.fp16,
+       fp16=False,
+       bf16=True,
        logging_steps=config.logging_steps,
-       save_steps=config.save_steps,
+       save_steps=500,
        eval_steps=config.eval_steps,
        warmup_steps=config.warmup_steps,
        weight_decay=config.weight_decay,
@@ -150,16 +158,11 @@ def train(
    trainer.train()
    trainer.save_model(f"{config.output_dir}/final_model")
 
-# main.py
-from config import TrainingConfig
-from data import load_data, get_tokenizer, prepare_dataset
-from model import get_model
-from trainer import train
 
 def main():
    config = TrainingConfig()
    
-   datasets = load_data("training_data.json", config)
+   datasets = load_data("data/retail_4o_train_500_user_converted.json", config)
    tokenizer = get_tokenizer(config)
    tokenized_datasets = DatasetDict({
        split: prepare_dataset(dataset, tokenizer, config)

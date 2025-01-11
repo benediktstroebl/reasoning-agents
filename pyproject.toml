@@ -1,0 +1,20 @@
+[project]
+name = "reasoning-agents"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "openai>=1.13.3",
+    "mistralai>=0.4.0",
+    "anthropic>=0.26.1",
+    "google-generativeai>=0.5.4",
+    "tenacity>=8.3.0",
+    "termcolor>=2.4.0",
+    "numpy>=1.26.4",
+    "litellm>=1.41.0",
+    "weave>=0.51.27",
+    "datasets>=3.2.0",
+    "transformers>=4.48.0",
+    "peft>=0.14.0",
+]
