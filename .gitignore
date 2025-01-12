@@ -12,3 +12,4 @@ output/*
 uv.lock
 wandb/*
 .python-version
+models/*
